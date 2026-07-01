@@ -1,15 +1,16 @@
 #ifndef DBUTILS_H
 #define DBUTILS_H
 
-#include "tree.h"
 #include <stdbool.h>
 #include <stdint.h>
 
 #define PAGE_SIZE 4096
 #define MAX_USERNAME_LENGTH 32
 #define MAX_EMAIL_LENGTH 255
+#define MAX_DB_PATH_LENGTH 512
 
 typedef struct BufferPool BufferPool;
+typedef struct Wal Wal;
 
 typedef struct {
   int id;
@@ -34,6 +35,8 @@ typedef struct {
 
 typedef struct {
   BufferPool *pool;
+  Wal *wal;
+  char db_path[MAX_DB_PATH_LENGTH];
   int index_root_page_id;
   int current_data_page_id;
 } Table;

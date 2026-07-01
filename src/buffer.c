@@ -1,6 +1,7 @@
 #include "buffer.h"
 #include "pager.h"
 #include "printer.h"
+#include <stdlib.h>
 #include <string.h>
 
 BufferPool *buffer_pool_init(const char *filename) {

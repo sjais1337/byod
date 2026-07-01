@@ -81,6 +81,10 @@ static int32_t find_leaf_node(BufferPool *pool, int32_t root_page_id,
     }
 
     uint32_t child_index = search_node(node, key);
+    if (child_index < header->num_keys &&
+        *internal_node_key(node, child_index) == key) {
+      child_index++;
+    }
     int32_t next_page_id = *internal_node_child(node, child_index);
 
     if (next_page_id == current_page_id) {
@@ -417,4 +421,28 @@ static void btree_scan_node(BufferPool *pool, int32_t page_id,
 void btree_scan(BufferPool *pool, int root_page_id, ScanCallback callback,
                 void *ctx) {
   btree_scan_node(pool, root_page_id, callback, ctx);
+}
+
+void print_btree(BufferPool *pool, int page_id, int level) {
+  void *node = buffer_pool_get_page(pool, page_id);
+  BTreeNodeHeader *header = get_header(node);
+
+  for (int i = 0; i < level; i++) {
+    printf("  ");
+  }
+
+  if (header->type == NODE_LEAF) {
+    printf("LEAF page=%d keys=%u:", page_id, header->num_keys);
+    for (uint32_t i = 0; i < header->num_keys; i++) {
+      printf(" %lld", (long long)*leaf_node_key(node, i));
+    }
+    printf("\n");
+  } else {
+    printf("INTERNAL page=%d keys=%u\n", page_id, header->num_keys);
+    for (int i = 0; i <= header->num_keys; i++) {
+      print_btree(pool, *internal_node_child(node, i), level + 1);
+    }
+  }
+
+  buffer_pool_unpin_page(pool, page_id, false);
 }

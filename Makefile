@@ -1,33 +1,64 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c11 -g -D_GNU_SOURCE
-TARGET = byod
+CFLAGS = -Wall -Wextra -std=c11 -g -D_GNU_SOURCE -Iinclude
 
-# Source files
-SRCS = $(wildcard *.c)
+BUILD_DIR = build
+BIN_DIR = bin
 
-# Object files
-OBJS = $(SRCS:.c=.o)
+CORE_SRCS = \
+	src/btree.c \
+	src/buffer.c \
+	src/dbutils.c \
+	src/input.c \
+	src/page.c \
+	src/pager.c \
+	src/sql.c \
+	src/table.c \
+	src/wal.c
 
-# Default target
-all: $(TARGET)
+CORE_OBJS = $(patsubst src/%.c,$(BUILD_DIR)/%.o,$(CORE_SRCS))
+MAIN_OBJ = $(BUILD_DIR)/main.o
+BENCH_OBJ = $(BUILD_DIR)/benchmark.o
+TEST_OBJ = $(BUILD_DIR)/test_runner.o
 
-# Link object files to create executable
-$(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS)
+BYOD = $(BIN_DIR)/byod
+BENCHMARK = $(BIN_DIR)/benchmark
+TEST_RUNNER = $(BIN_DIR)/test_runner
 
-# Compile source files to object files
-%.o: %.c
+all: $(BYOD) $(BENCHMARK) $(TEST_RUNNER)
+
+$(BYOD): $(CORE_OBJS) $(MAIN_OBJ) | $(BIN_DIR)
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(BENCHMARK): $(CORE_OBJS) $(BENCH_OBJ) | $(BIN_DIR)
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(TEST_RUNNER): $(CORE_OBJS) $(TEST_OBJ) | $(BIN_DIR)
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(BUILD_DIR)/%.o: src/%.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Clean build artifacts
-clean:
-	rm -f $(OBJS) $(TARGET)
+$(BUILD_DIR)/benchmark.o: bench/benchmark.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
 
-# Rebuild from scratch
+$(BUILD_DIR)/test_runner.o: tests/test_runner.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR) $(BIN_DIR):
+	mkdir -p $@
+
+test: $(TEST_RUNNER)
+	./$(TEST_RUNNER)
+
+bench: $(BENCHMARK)
+	./$(BENCHMARK)
+
+run: $(BYOD)
+	./$(BYOD)
+
+clean:
+	rm -rf $(BUILD_DIR) $(BIN_DIR)
+
 rebuild: clean all
 
-# Run the program
-run: $(TARGET)
-	./$(TARGET)
-
-.PHONY: all clean rebuild run
+.PHONY: all clean rebuild run test bench
